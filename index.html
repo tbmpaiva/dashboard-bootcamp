@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Apps Script</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .setup-box {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .setup-box h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-subtitle {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 40px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .loading {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 20px;
+        }
+
+        .error {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>📊 Dashboard - Bootcamp Liderança</h1>
+                <p style="color: #888; font-size: 14px;" id="lastUpdate">Configure o Apps Script</p>
+            </div>
+            <button class="btn" id="refreshBtn" onclick="loadData()" disabled>🔄 Atualizar</button>
+        </header>
+
+        <div class="setup-box" id="setupBox">
+            <h2>⚙️ Configuração do Apps Script</h2>
+            <p style="margin-bottom: 20px;">Cole aqui o link do seu Google Apps Script Web App:</p>
+            
+            <div class="input-group">
+                <label>🔗 URL do Apps Script:</label>
+                <input 
+                    type="text" 
+                    id="scriptUrl" 
+                    placeholder="https://script.google.com/macros/s/ABC123.../exec"
+                >
+            </div>
+            
+            <button class="btn" onclick="saveConfig()">💾 Salvar e Carregar</button>
+            
+            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">📝 Como obter o link:</h3>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Abra a Google Sheet</li>
+                    <li>Vá em <strong>Extensões → Apps Script</strong></li>
+                    <li>Cole o código fornecido no guia</li>
+                    <li>Clique em <strong>Implementar → Nova implementação</strong></li>
+                    <li>Configure como <strong>"Aplicativo da Web"</strong></li>
+                    <li>Em "Quem tem acesso" escolha <strong>"Qualquer pessoa"</strong></li>
+                    <li>Copie o link gerado e cole acima</li>
+                </ol>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            🔄 Carregando dados...
+        </div>
+
+        <div id="error" style="display: none;"></div>
+
+        <div id="dashboard" style="display: none;">
+            <div class="metrics-grid" id="metricsGrid"></div>
+            <div class="charts-grid" id="chartsGrid"></div>
+            <div class="table-container">
+                <h2 class="chart-title">📧 Detalhes por Email</h2>
+                <table id="dataTable"></table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+        let scriptUrl = localStorage.getItem('scriptUrl');
+
+        if (scriptUrl) {
+            document.getElementById('scriptUrl').value = scriptUrl;
+            document.getElementById('setupBox').style.display = 'none';
+            document.getElementById('refreshBtn').disabled = false;
+            loadData();
+        }
+
+        function saveConfig() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            
+            if (!url) {
+                alert('Por favor, cole o URL do Apps Script!');
+                return;
+            }
+
+            if (!url.includes('script.google.com')) {
+                alert('Este não parece ser um URL válido do Google Apps Script.');
+                return;
+            }
+
+            scriptUrl = url;
+            localStorage.setItem('scriptUrl', url);
+            
+            document.getElementById('setupBox').style.display = 'none';
+            document.getElementById('refreshBtn').disabled = false;
+            loadData();
+        }
+
+        async function loadData() {
+            if (!scriptUrl) {
+                alert('Configure o Apps Script primeiro!');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+
+            try {
+                const response = await fetch(scriptUrl);
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao carregar dados. Verifique se o Apps Script está configurado corretamente.');
+                }
+
+                const rawData = await response.json();
+                processData(rawData);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('lastUpdate').textContent = 
+                    `Última atualização: ${new Date().toLocaleString('pt-PT')}`;
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro!</strong><br><br>
+                        ${error.message}<br><br>
+                        Verifique se:<br>
+                        1. O Apps Script está implementado<br>
+                        2. O acesso está como "Qualquer pessoa"<br>
+                        3. O link está correto
+                    </div>
+                `;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function processData(rawData) {
+            const emails = [];
+            let totalEnvios = 0, totalAberturas = 0, totalCliques = 0;
+            let totalVisualizacoes = 0, totalVendas = 0;
+            let vendasNovos = 0, vendasClientes = 0;
+
+            const emailRow = rawData[1];
+            const enviosRow = rawData[2];
+            const aberturasRow = rawData[3];
+            const cliquesRow = rawData[5];
+            const visualRow = rawData[7];
+            const vendasRow = rawData[9];
+            const novosRow = rawData[12];
+            const clientesRow = rawData[13];
+
+            for (let col = 1; col < emailRow.length; col++) {
+                const emailName = emailRow[col];
+                if (!emailName || emailName.includes('TOTAIS')) continue;
+
+                const parseValue = (val) => {
+                    if (!val || val === '' || val === '-') return 0;
+                    const num = parseFloat(String(val).replace(/\s/g, '').replace(',', '.').replace('%', ''));
+                    return isNaN(num) ? 0 : num;
+                };
+
+                const envios = parseValue(enviosRow[col]);
+                const aberturas = parseValue(aberturasRow[col]);
+                const cliques = parseValue(cliquesRow[col]);
+                const visualizacoes = parseValue(visualRow[col]);
+                const vendas = parseValue(vendasRow[col]);
+                const novos = parseValue(novosRow[col]);
+                const clientes = parseValue(clientesRow[col]);
+
+                totalEnvios += envios;
+                totalAberturas += aberturas;
+                totalCliques += cliques;
+                totalVisualizacoes += visualizacoes;
+                totalVendas += vendas;
+                vendasNovos += novos;
+                vendasClientes += clientes;
+
+                emails.push({
+                    nome: emailName,
+                    envios, aberturas, cliques, visualizacoes, vendas,
+                    txAbertura: envios > 0 ? ((aberturas / envios) * 100).toFixed(2) : 0,
+                    txClique: aberturas > 0 ? ((cliques / aberturas) * 100).toFixed(2) : 0,
+                    txConversao: visualizacoes > 0 ? ((vendas / visualizacoes) * 100).toFixed(2) : 0,
+                    novos, clientes
+                });
+            }
+
+            renderMetrics({
+                totalEnvios, totalAberturas, totalCliques, totalVisualizacoes, totalVendas,
+                taxaAbertura: totalEnvios > 0 ? ((totalAberturas / totalEnvios) * 100).toFixed(2) : 0,
+                taxaClique: totalAberturas > 0 ? ((totalCliques / totalAberturas) * 100).toFixed(2) : 0,
+                conversao: totalVisualizacoes > 0 ? ((totalVendas / totalVisualizacoes) * 100).toFixed(2) : 0,
+                vendasNovos, vendasClientes
+            });
+
+            renderCharts(emails);
+            renderTable(emails);
+        }
+
+        function renderMetrics(m) {
+            document.getElementById('metricsGrid').innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-label">Total de Envios</div>
+                    <div class="metric-value">${m.totalEnvios.toLocaleString('pt-PT')}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Taxa de Abertura</div>
+                    <div class="metric-value">${m.taxaAbertura}%</div>
+                    <div class="metric-subtitle">${m.totalAberturas.toLocaleString('pt-PT')} aberturas</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Taxa de Clique</div>
+                    <div class="metric-value">${m.taxaClique}%</div>
+                    <div class="metric-subtitle">${m.totalCliques.toLocaleString('pt-PT')} cliques</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Visualizações</div>
+                    <div class="metric-value">${m.totalVisualizacoes.toLocaleString('pt-PT')}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Total de Vendas</div>
+                    <div class="metric-value">${m.totalVendas.toLocaleString('pt-PT')}</div>
+                    <div class="metric-subtitle">${m.conversao}% conversão</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Por Público</div>
+                    <div class="metric-value">${(m.vendasNovos + m.vendasClientes).toLocaleString('pt-PT')}</div>
+                    <div class="metric-subtitle">${m.vendasNovos} novos | ${m.vendasClientes} clientes</div>
+                </div>
+            `;
+        }
+
+        function renderCharts(emails) {
+            Object.values(charts).forEach(c => c.destroy());
+            charts = {};
+
+            document.getElementById('chartsGrid').innerHTML = `
+                <div class="chart-card"><h3 class="chart-title">📊 Performance</h3><canvas id="c1"></canvas></div>
+                <div class="chart-card"><h3 class="chart-title">🔻 Funil</h3><canvas id="c2"></canvas></div>
+                <div class="chart-card"><h3 class="chart-title">👥 Público</h3><canvas id="c3"></canvas></div>
+                <div class="chart-card"><h3 class="chart-title">📈 Taxas</h3><canvas id="c4"></canvas></div>
+            `;
+
+            charts.c1 = new Chart(document.getElementById('c1'), {
+                type: 'bar',
+                data: {
+                    labels: emails.map(e => e.nome),
+                    datasets: [{
+                        label: 'Aberturas',
+                        data: emails.map(e => e.aberturas),
+                        backgroundColor: 'rgba(102, 126, 234, 0.7)'
+                    }, {
+                        label: 'Cliques',
+                        data: emails.map(e => e.cliques),
+                        backgroundColor: 'rgba(118, 75, 162, 0.7)'
+                    }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+
+            charts.c2 = new Chart(document.getElementById('c2'), {
+                type: 'bar',
+                data: {
+                    labels: ['Envios', 'Aberturas', 'Cliques', 'Views', 'Vendas'],
+                    datasets: [{
+                        data: [
+                            emails.reduce((s, e) => s + e.envios, 0),
+                            emails.reduce((s, e) => s + e.aberturas, 0),
+                            emails.reduce((s, e) => s + e.cliques, 0),
+                            emails.reduce((s, e) => s + e.visualizacoes, 0),
+                            emails.reduce((s, e) => s + e.vendas, 0)
+                        ],
+                        backgroundColor: ['rgba(102, 126, 234, 0.9)', 'rgba(102, 126, 234, 0.7)', 
+                            'rgba(118, 75, 162, 0.7)', 'rgba(118, 75, 162, 0.6)', 'rgba(118, 75, 162, 0.5)']
+                    }]
+                },
+                options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+            });
+
+            charts.c3 = new Chart(document.getElementById('c3'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Novos', 'Clientes'],
+                    datasets: [{
+                        data: [
+                            emails.reduce((s, e) => s + e.novos, 0),
+                            emails.reduce((s, e) => s + e.clientes, 0)
+                        ],
+                        backgroundColor: ['rgba(102, 126, 234, 0.8)', 'rgba(118, 75, 162, 0.8)']
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            charts.c4 = new Chart(document.getElementById('c4'), {
+                type: 'line',
+                data: {
+                    labels: emails.map(e => e.nome),
+                    datasets: [{
+                        label: 'Tx Abertura %',
+                        data: emails.map(e => e.txAbertura),
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Tx Clique %',
+                        data: emails.map(e => e.txClique),
+                        borderColor: 'rgba(118, 75, 162, 1)',
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true }
+            });
+        }
+
+        function renderTable(emails) {
+            let html = `<thead><tr><th>Email</th><th>Envios</th><th>Aberturas</th><th>Tx Ab</th>
+                <th>Cliques</th><th>Tx Cl</th><th>Views</th><th>Vendas</th><th>Tx Conv</th>
+                <th>Novos</th><th>Clientes</th></tr></thead><tbody>`;
+            
+            emails.forEach(e => {
+                html += `<tr>
+                    <td><strong>${e.nome}</strong></td>
+                    <td>${e.envios.toLocaleString('pt-PT')}</td>
+                    <td>${e.aberturas.toLocaleString('pt-PT')}</td>
+                    <td>${e.txAbertura}%</td>
+                    <td>${e.cliques.toLocaleString('pt-PT')}</td>
+                    <td>${e.txClique}%</td>
+                    <td>${e.visualizacoes.toLocaleString('pt-PT')}</td>
+                    <td><strong>${e.vendas}</strong></td>
+                    <td>${e.txConversao}%</td>
+                    <td>${e.novos}</td>
+                    <td>${e.clientes}</td>
+                </tr>`;
+            });
+
+            document.getElementById('dataTable').innerHTML = html + '</tbody>';
+        }
+    </script>
+</body>
+</html>
